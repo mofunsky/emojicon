@@ -28,7 +28,8 @@ import com.rockerhieu.emojicon.EmojiconTextView;
 import com.rockerhieu.emojicon.EmojiconsFragment;
 import com.rockerhieu.emojicon.emoji.Emojicon;
 
-public class MainActivity extends FragmentActivity implements EmojiconGridFragment.OnEmojiconClickedListener, EmojiconsFragment.OnEmojiconBackspaceClickedListener {
+public class MainActivity extends FragmentActivity implements EmojiconGridFragment
+        .OnEmojiconClickedListener, EmojiconGridFragment.OnEmojiconBackspaceClickedListener {
     EmojiconEditText mEditEmojicon;
     EmojiconTextView mTxtEmojicon;
     CheckBox mCheckBox;
@@ -71,7 +72,7 @@ public class MainActivity extends FragmentActivity implements EmojiconGridFragme
     }
 
     @Override
-    public void onEmojiconBackspaceClicked(View v) {
+    public void onEmojiconBackspaceClicked() {
         EmojiconsFragment.backspace(mEditEmojicon);
     }
 }

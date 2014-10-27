@@ -19,8 +19,12 @@ package com.rockerhieu.emojicon;
 import java.util.Arrays;
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.SystemClock;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
@@ -33,6 +37,7 @@ import com.rockerhieu.emojicon.emoji.People;
  */
 public class EmojiconGridFragment extends Fragment implements AdapterView.OnItemClickListener {
     private OnEmojiconClickedListener mOnEmojiconClickedListener;
+    private OnEmojiconBackspaceClickedListener mOnEmojiconBackspaceClickedListener;
     private EmojiconRecents mRecents;
     private Emojicon[] mData;
     private boolean mUseSystemDefault = false;
@@ -70,6 +75,7 @@ public class EmojiconGridFragment extends Fragment implements AdapterView.OnItem
             mData = Arrays.asList(o).toArray(new Emojicon[o.length]);
             mUseSystemDefault = bundle.getBoolean(USE_SYSTEM_DEFAULT_KEY);
         }
+
         gridView.setAdapter(new EmojiAdapter(view.getContext(), mData, mUseSystemDefault));
         gridView.setOnItemClickListener(this);
     }
@@ -90,22 +96,36 @@ public class EmojiconGridFragment extends Fragment implements AdapterView.OnItem
         } else {
             throw new IllegalArgumentException(activity + " must implement interface " + OnEmojiconClickedListener.class.getSimpleName());
         }
+        if (getActivity() instanceof OnEmojiconBackspaceClickedListener) {
+            mOnEmojiconBackspaceClickedListener = (OnEmojiconBackspaceClickedListener) getActivity();
+        } else if(getParentFragment() instanceof  OnEmojiconBackspaceClickedListener) {
+            mOnEmojiconBackspaceClickedListener = (OnEmojiconBackspaceClickedListener) getParentFragment();
+        } else {
+            throw new IllegalArgumentException(activity + " must implement interface " + OnEmojiconBackspaceClickedListener.class.getSimpleName());
+        }
     }
 
     @Override
     public void onDetach() {
         mOnEmojiconClickedListener = null;
+        mOnEmojiconBackspaceClickedListener = null;
         super.onDetach();
     }
 
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-        if (mOnEmojiconClickedListener != null) {
-            mOnEmojiconClickedListener.onEmojiconClicked((Emojicon) parent.getItemAtPosition(position));
-        }
-        if (mRecents != null) {
-            mRecents.addRecentEmoji(view.getContext(), ((Emojicon) parent
-                .getItemAtPosition(position)));
+        if (mData[position].equals(Emojicon.fromCodePoint(0x1f001))) {
+            if (mOnEmojiconBackspaceClickedListener != null) {
+                mOnEmojiconBackspaceClickedListener.onEmojiconBackspaceClicked();
+            }
+        } else {
+            if (mOnEmojiconClickedListener != null) {
+                mOnEmojiconClickedListener.onEmojiconClicked((Emojicon) parent.getItemAtPosition(position));
+            }
+            if (mRecents != null) {
+                mRecents.addRecentEmoji(view.getContext(), ((Emojicon) parent
+                        .getItemAtPosition(position)));
+            }
         }
     }
 
@@ -113,7 +133,79 @@ public class EmojiconGridFragment extends Fragment implements AdapterView.OnItem
         mRecents = recents;
     }
 
+    public interface OnEmojiconBackspaceClickedListener {
+        void onEmojiconBackspaceClicked();
+    }
+
     public interface OnEmojiconClickedListener {
         void onEmojiconClicked(Emojicon emojicon);
+    }
+
+    /**
+     * A class, that can be used as a TouchListener on any view (e.g. a Button).
+     * It cyclically runs a clickListener, emulating keyboard-like behaviour. First
+     * click is fired immediately, next before initialInterval, and subsequent before
+     * normalInterval.
+     * <p/>
+     * <p>Interval is scheduled before the onClick completes, so it has to run fast.
+     * If it runs slow, it does not generate skipped onClicks.
+     */
+    public static class RepeatListener implements View.OnTouchListener {
+
+        private Handler handler = new Handler();
+
+        private int initialInterval;
+        private final int normalInterval;
+        private final View.OnClickListener clickListener;
+
+        private Runnable handlerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (downView == null) {
+                    return;
+                }
+                handler.removeCallbacksAndMessages(downView);
+                handler.postAtTime(this, downView, SystemClock.uptimeMillis() + normalInterval);
+                clickListener.onClick(downView);
+            }
+        };
+
+        private View downView;
+
+        /**
+         * @param initialInterval The interval before first click event
+         * @param normalInterval  The interval before second and subsequent click
+         *                        events
+         * @param clickListener   The OnClickListener, that will be called
+         *                        periodically
+         */
+        public RepeatListener(int initialInterval, int normalInterval, View.OnClickListener clickListener) {
+            if (clickListener == null)
+                throw new IllegalArgumentException("null runnable");
+            if (initialInterval < 0 || normalInterval < 0)
+                throw new IllegalArgumentException("negative interval");
+
+            this.initialInterval = initialInterval;
+            this.normalInterval = normalInterval;
+            this.clickListener = clickListener;
+        }
+
+        public boolean onTouch(View view, MotionEvent motionEvent) {
+            switch (motionEvent.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    downView = view;
+                    handler.removeCallbacks(handlerRunnable);
+                    handler.postAtTime(handlerRunnable, downView, SystemClock.uptimeMillis() + initialInterval);
+                    clickListener.onClick(view);
+                    return true;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                case MotionEvent.ACTION_OUTSIDE:
+                    handler.removeCallbacksAndMessages(downView);
+                    downView = null;
+                    return true;
+            }
+            return false;
+        }
     }
 }

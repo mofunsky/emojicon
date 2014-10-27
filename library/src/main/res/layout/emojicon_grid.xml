@@ -14,14 +14,14 @@
   ~ ITS DERIVATIVES.
   -->
 
-<GridView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.rockerhieu.emojicon.NonScrollableGridView
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/Emoji_GridView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:cacheColorHint="@android:color/transparent"
-    android:columnWidth="70dip"
-    android:horizontalSpacing="0dip"
-    android:numColumns="auto_fit"
+    android:horizontalSpacing="20dp"
+    android:numColumns="7"
     android:scrollbars="vertical"
-    android:verticalSpacing="10dip" />
+    android:verticalSpacing="20dp"/>

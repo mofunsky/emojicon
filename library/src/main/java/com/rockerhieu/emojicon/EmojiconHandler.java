@@ -31,6 +31,7 @@ public final class EmojiconHandler {
 
     static {
         // People
+        sEmojisMap.put(0x1f001, R.drawable.emoji_1f001);
         sEmojisMap.put(0x1f604, R.drawable.emoji_1f604);
         sEmojisMap.put(0x1f603, R.drawable.emoji_1f603);
         sEmojisMap.put(0x1f600, R.drawable.emoji_1f600);

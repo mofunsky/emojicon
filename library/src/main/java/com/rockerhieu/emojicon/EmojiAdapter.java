@@ -19,9 +19,12 @@ package com.rockerhieu.emojicon;
 import java.util.List;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
+
 import com.rockerhieu.emojicon.emoji.Emojicon;
 
 /**
@@ -60,9 +63,11 @@ class EmojiAdapter extends ArrayAdapter<Emojicon> {
             holder.icon.setUseSystemDefault(mUseSystemDefault);
             v.setTag(holder);
         }
-        Emojicon emoji = getItem(position);
         ViewHolder holder = (ViewHolder) v.getTag();
+        Emojicon emoji = getItem(position);
+        holder.icon.setVisibility(View.VISIBLE);
         holder.icon.setText(emoji.getEmoji());
+
         return v;
     }
 

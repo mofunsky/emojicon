@@ -30,19 +30,21 @@ import android.view.*;
 import android.widget.EditText;
 import com.rockerhieu.emojicon.emoji.*;
 
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * @author Hieu Rocker (rockerhieu@gmail.com).
  */
-public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChangeListener, EmojiconRecents {
-    private OnEmojiconBackspaceClickedListener mOnEmojiconBackspaceClickedListener;
+public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChangeListener,
+        EmojiconRecents {
     private int mEmojiTabLastSelectedIndex = -1;
-    private View[] mEmojiTabs;
     private PagerAdapter mEmojisAdapter;
     private EmojiconRecentsManager mRecentsManager;
     private boolean mUseSystemDefault = false;
+
+    //fix by reason
+    private final static int MAX_COUNT_PER_PAGE = 27;
 
     private static final String USE_SYSTEM_DEFAULT_KEY = "useSystemDefaults";
 
@@ -61,40 +63,24 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
         emojisPager.setOnPageChangeListener(this);
         // we handle recents
         EmojiconRecents recents = this;
-        mEmojisAdapter = new EmojisPagerAdapter(getFragmentManager(), Arrays.asList(
-                EmojiconRecentsGridFragment.newInstance(mUseSystemDefault),
-                EmojiconGridFragment.newInstance(People.DATA, recents, mUseSystemDefault),
-                EmojiconGridFragment.newInstance(Nature.DATA, recents, mUseSystemDefault),
-                EmojiconGridFragment.newInstance(Objects.DATA, recents, mUseSystemDefault),
-                EmojiconGridFragment.newInstance(Places.DATA, recents, mUseSystemDefault),
-                EmojiconGridFragment.newInstance(Symbols.DATA, recents, mUseSystemDefault)
-        ));
-        emojisPager.setAdapter(mEmojisAdapter);
 
-        mEmojiTabs = new View[6];
-        mEmojiTabs[0] = view.findViewById(R.id.emojis_tab_0_recents);
-        mEmojiTabs[1] = view.findViewById(R.id.emojis_tab_1_people);
-        mEmojiTabs[2] = view.findViewById(R.id.emojis_tab_2_nature);
-        mEmojiTabs[3] = view.findViewById(R.id.emojis_tab_3_objects);
-        mEmojiTabs[4] = view.findViewById(R.id.emojis_tab_4_cars);
-        mEmojiTabs[5] = view.findViewById(R.id.emojis_tab_5_punctuation);
-        for (int i = 0; i < mEmojiTabs.length; i++) {
-            final int position = i;
-            mEmojiTabs[i].setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    emojisPager.setCurrentItem(position);
-                }
-            });
-        }
-        view.findViewById(R.id.emojis_backspace).setOnTouchListener(new RepeatListener(1000, 50, new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mOnEmojiconBackspaceClickedListener != null) {
-                    mOnEmojiconBackspaceClickedListener.onEmojiconBackspaceClicked(v);
-                }
+        List<EmojiconGridFragment> fragments = new ArrayList<EmojiconGridFragment>();
+        Emojicon[] data = new Emojicon[MAX_COUNT_PER_PAGE + 1];
+        int i = 0, j = 0;
+        while (i < People.DATA.length) {
+            if (i > 0 && i % MAX_COUNT_PER_PAGE == 0) {
+                data[j] = Emojicon.fromCodePoint(0x1f001);
+                fragments.add(EmojiconGridFragment.newInstance(data, recents, mUseSystemDefault));
+                data = new Emojicon[MAX_COUNT_PER_PAGE + 1];
+                j = 0;
             }
-        }));
+            data[j] = People.DATA[i];
+            i++;
+            j++;
+        }
+
+        mEmojisAdapter = new EmojisPagerAdapter(getFragmentManager(), fragments);
+        emojisPager.setAdapter(mEmojisAdapter);
 
         // get last selected page
         mRecentsManager = EmojiconRecentsManager.getInstance(view.getContext());
@@ -117,18 +103,10 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
     @Override
     public void onAttach(Activity activity) {
         super.onAttach(activity);
-        if (getActivity() instanceof OnEmojiconBackspaceClickedListener) {
-            mOnEmojiconBackspaceClickedListener = (OnEmojiconBackspaceClickedListener) getActivity();
-        } else if(getParentFragment() instanceof  OnEmojiconBackspaceClickedListener) {
-            mOnEmojiconBackspaceClickedListener = (OnEmojiconBackspaceClickedListener) getParentFragment();
-        } else {
-            throw new IllegalArgumentException(activity + " must implement interface " + OnEmojiconBackspaceClickedListener.class.getSimpleName());
-        }
     }
 
     @Override
     public void onDetach() {
-        mOnEmojiconBackspaceClickedListener = null;
         super.onDetach();
     }
 
@@ -148,9 +126,7 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
 
     @Override
     public void addRecentEmoji(Context context, Emojicon emojicon) {
-        final ViewPager emojisPager = (ViewPager) getView().findViewById(R.id.emojis_pager);
-        EmojiconRecentsGridFragment fragment = (EmojiconRecentsGridFragment) mEmojisAdapter.instantiateItem(emojisPager, 0);
-        fragment.addRecentEmoji(context, emojicon);
+
     }
 
     public static void backspace(EditText editText) {
@@ -174,10 +150,6 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
             case 3:
             case 4:
             case 5:
-                if (mEmojiTabLastSelectedIndex >= 0 && mEmojiTabLastSelectedIndex < mEmojiTabs.length) {
-                    mEmojiTabs[mEmojiTabLastSelectedIndex].setSelected(false);
-                }
-                mEmojiTabs[i].setSelected(true);
                 mEmojiTabLastSelectedIndex = i;
                 mRecentsManager.setRecentPage(i);
                 break;
@@ -205,78 +177,6 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
         public int getCount() {
             return fragments.size();
         }
-    }
-
-    /**
-     * A class, that can be used as a TouchListener on any view (e.g. a Button).
-     * It cyclically runs a clickListener, emulating keyboard-like behaviour. First
-     * click is fired immediately, next before initialInterval, and subsequent before
-     * normalInterval.
-     * <p/>
-     * <p>Interval is scheduled before the onClick completes, so it has to run fast.
-     * If it runs slow, it does not generate skipped onClicks.
-     */
-    public static class RepeatListener implements View.OnTouchListener {
-
-        private Handler handler = new Handler();
-
-        private int initialInterval;
-        private final int normalInterval;
-        private final View.OnClickListener clickListener;
-
-        private Runnable handlerRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (downView == null) {
-                    return;
-                }
-                handler.removeCallbacksAndMessages(downView);
-                handler.postAtTime(this, downView, SystemClock.uptimeMillis() + normalInterval);
-                clickListener.onClick(downView);
-            }
-        };
-
-        private View downView;
-
-        /**
-         * @param initialInterval The interval before first click event
-         * @param normalInterval  The interval before second and subsequent click
-         *                        events
-         * @param clickListener   The OnClickListener, that will be called
-         *                        periodically
-         */
-        public RepeatListener(int initialInterval, int normalInterval, View.OnClickListener clickListener) {
-            if (clickListener == null)
-                throw new IllegalArgumentException("null runnable");
-            if (initialInterval < 0 || normalInterval < 0)
-                throw new IllegalArgumentException("negative interval");
-
-            this.initialInterval = initialInterval;
-            this.normalInterval = normalInterval;
-            this.clickListener = clickListener;
-        }
-
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            switch (motionEvent.getAction()) {
-                case MotionEvent.ACTION_DOWN:
-                    downView = view;
-                    handler.removeCallbacks(handlerRunnable);
-                    handler.postAtTime(handlerRunnable, downView, SystemClock.uptimeMillis() + initialInterval);
-                    clickListener.onClick(view);
-                    return true;
-                case MotionEvent.ACTION_UP:
-                case MotionEvent.ACTION_CANCEL:
-                case MotionEvent.ACTION_OUTSIDE:
-                    handler.removeCallbacksAndMessages(downView);
-                    downView = null;
-                    return true;
-            }
-            return false;
-        }
-    }
-
-    public interface OnEmojiconBackspaceClickedListener {
-        void onEmojiconBackspaceClicked(View v);
     }
 
     @Override
