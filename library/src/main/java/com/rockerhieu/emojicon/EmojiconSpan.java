@@ -41,7 +41,13 @@ class EmojiconSpan extends DynamicDrawableSpan {
             try {
                 mDrawable = mContext.getResources().getDrawable(mResourceId);
                 int size = mSize;
-                mDrawable.setBounds(0, 0, size, size);
+                if (mResourceId == R.drawable.emoji_1f001) {
+                    //mDrawable.setBounds(0, 0, size + 12, size); // 删除键理论上要比其他表情宽
+                    mDrawable.setBounds(0, 0, size, size);
+                } else {
+                    mDrawable.setBounds(0, 0, size, size);
+                }
+
             } catch (Exception e) {
                 // swallow
             }

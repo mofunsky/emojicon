@@ -21,7 +21,8 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:cacheColorHint="@android:color/transparent"
-    android:horizontalSpacing="20dp"
+    android:horizontalSpacing="24dp"
     android:numColumns="7"
     android:scrollbars="vertical"
-    android:verticalSpacing="20dp"/>
+    android:verticalSpacing="24dp"
+    android:padding="20dp"/>

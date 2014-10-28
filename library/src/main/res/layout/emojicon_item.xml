@@ -18,13 +18,12 @@
 <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:emojicon="http://schemas.android.com/apk/res-auto"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content">
     <com.rockerhieu.emojicon.EmojiconTextView
-            android:layout_gravity="center"
             android:id="@+id/emojicon_icon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            emojicon:emojiconSize="32dp"
-            android:gravity="center"/>
+            android:layout_width="35dp"
+            android:layout_height="25dp"
+            emojicon:emojiconSize="24dp"
+            android:gravity="left"/>
 </FrameLayout>
