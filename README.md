@@ -35,7 +35,7 @@ Fore more information please see [the website](http://rockerhieu.github.io/emoji
 </LinearLayout>
 ```
 
-![image](https://github.com/rockerhieu/emojicon/raw/master/images/sample.jpg)
+![image](https://github.com/reasonpun/emojicon/blob/master/images/sample.jpg)
 
 _Note: You can change the size of emojis in XML layout through attribute `emojiconSize`._
 
