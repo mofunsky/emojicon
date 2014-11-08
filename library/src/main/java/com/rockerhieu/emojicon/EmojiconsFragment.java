@@ -18,6 +18,15 @@ package com.rockerhieu.emojicon;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffXfermode;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.SystemClock;
@@ -28,6 +37,9 @@ import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.view.*;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+
 import com.rockerhieu.emojicon.emoji.*;
 
 import java.util.ArrayList;
@@ -36,12 +48,14 @@ import java.util.List;
 /**
  * @author Hieu Rocker (rockerhieu@gmail.com).
  */
-public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChangeListener,
-        EmojiconRecents {
+public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChangeListener {
     private int mEmojiTabLastSelectedIndex = -1;
     private PagerAdapter mEmojisAdapter;
-    private EmojiconRecentsManager mRecentsManager;
     private boolean mUseSystemDefault = false;
+    private LinearLayout viewIndicator;
+    private Bitmap selected_page_indicator;
+    private Bitmap unselect_page_indicator;
+    private List<ImageView> image_list;
 
     //fix by reason
     private final static int MAX_COUNT_PER_PAGE = 27;
@@ -61,16 +75,26 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
         View view = inflater.inflate(R.layout.emojicons, container, false);
         final ViewPager emojisPager = (ViewPager) view.findViewById(R.id.emojis_pager);
         emojisPager.setOnPageChangeListener(this);
-        // we handle recents
-        EmojiconRecents recents = this;
 
+        viewIndicator = (LinearLayout) view.findViewById(R.id.viewIndicator);
         List<EmojiconGridFragment> fragments = new ArrayList<EmojiconGridFragment>();
         Emojicon[] data = new Emojicon[MAX_COUNT_PER_PAGE + 1];
         int i = 0, j = 0;
+
+        image_list = new ArrayList<ImageView>();
+        selected_page_indicator = getRoundedCornerBitmap(12, Color.parseColor("#999999"));
+        unselect_page_indicator = getRoundedCornerBitmap(12, Color.parseColor("#e4e4e4"));
+        LinearLayout.LayoutParams layout_params = new LinearLayout.LayoutParams(12, 12);
+        layout_params.setMargins(10, 10, 10, 10);
         while (i < People.DATA.length) {
             if (i > 0 && i % MAX_COUNT_PER_PAGE == 0) {
                 data[j] = Emojicon.fromCodePoint(0x1f001);
-                fragments.add(EmojiconGridFragment.newInstance(data, recents, mUseSystemDefault));
+                fragments.add(EmojiconGridFragment.newInstance(data, null, mUseSystemDefault));
+                ImageView img = new ImageView(this.getActivity());
+                img.setImageBitmap(unselect_page_indicator);
+                img.setLayoutParams(layout_params);
+                viewIndicator.addView(img);
+                image_list.add(img);
                 data = new Emojicon[MAX_COUNT_PER_PAGE + 1];
                 j = 0;
             }
@@ -79,24 +103,13 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
             j++;
         }
 
+        for (ImageView img : image_list) {
+            img.setImageBitmap(unselect_page_indicator);
+        }
+        image_list.get(0).setImageBitmap(selected_page_indicator);
+        emojisPager.setOffscreenPageLimit(image_list.size());
         mEmojisAdapter = new EmojisPagerAdapter(getFragmentManager(), fragments);
         emojisPager.setAdapter(mEmojisAdapter);
-
-        // get last selected page
-        mRecentsManager = EmojiconRecentsManager.getInstance(view.getContext());
-        int page = mRecentsManager.getRecentPage();
-        // last page was recents, check if there are recents to use
-        // if none was found, go to page 1
-        if (page == 0 && mRecentsManager.size() == 0) {
-            page = 1;
-        }
-
-        if (page == 0) {
-            onPageSelected(page);
-        }
-        else {
-            emojisPager.setCurrentItem(page, false);
-        }
         return view;
     }
 
@@ -124,11 +137,6 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
         }
     }
 
-    @Override
-    public void addRecentEmoji(Context context, Emojicon emojicon) {
-
-    }
-
     public static void backspace(EditText editText) {
         KeyEvent event = new KeyEvent(0, 0, 0, KeyEvent.KEYCODE_DEL, 0, 0, 0, 0, KeyEvent.KEYCODE_ENDCALL);
         editText.dispatchKeyEvent(event);
@@ -151,7 +159,10 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
             case 4:
             case 5:
                 mEmojiTabLastSelectedIndex = i;
-                mRecentsManager.setRecentPage(i);
+                for (ImageView img : image_list) {
+                    img.setImageBitmap(unselect_page_indicator);
+                }
+                image_list.get(i).setImageBitmap(selected_page_indicator);
                 break;
         }
     }
@@ -186,6 +197,25 @@ public class EmojiconsFragment extends Fragment implements ViewPager.OnPageChang
             mUseSystemDefault = getArguments().getBoolean(USE_SYSTEM_DEFAULT_KEY);
         } else {
             mUseSystemDefault = false;
+        }
+    }
+
+    public static Bitmap getRoundedCornerBitmap(int radius, int color) {
+        try {
+            Bitmap output = Bitmap.createBitmap(radius, radius, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(output);
+            final Paint paint = new Paint();
+            final RectF rectF = new RectF(new Rect(0, 0, radius, radius));
+            final float roundPx = 14;
+            paint.setAntiAlias(true);
+            canvas.drawARGB(0, 0, 0, 0);
+            paint.setColor(color);
+            canvas.drawRoundRect(rectF, roundPx, roundPx, paint);
+            paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
+            return output;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 }
